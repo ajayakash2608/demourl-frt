@@ -5,6 +5,8 @@ import ForgotPassword from './components/ForgotPassword';
 import Login from './components/Login';
 import ResetPassword from './components/ResetPassword';
 import URLShortener from './components/URLShortener';
+import ViewUrl.js from './components/ViewUrl';
+import Dashboard from './components/Dashboard';
 
 
 function App() {
@@ -16,6 +18,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/urlshortener" element={<URLShortener />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/urls" element={<ViewUrls />} />
       </Routes>
     </Router>
   );
