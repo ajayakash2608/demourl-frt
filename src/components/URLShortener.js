@@ -1,116 +1,135 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
-const URLShortener = () => {
-  const [longUrl, setLongUrl] = useState('');
-  const [shortUrl, setShortUrl] = useState('');
+const ShortenForm = () => {
+  const [originalUrl, setOriginalUrl] = useState('');
+  const [shortenedUrl, setShortenedUrl] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [dailyCount, setDailyCount] = useState(0);
+  const [monthlyCount, setMonthlyCount] = useState(0);
 
-  const shortenUrl = async () => {
-    if (!longUrl) {
-      setError('Please enter a URL');
-      return;
-    }
-    setError('');
-    setLoading(true);
+  useEffect(() => {
+    // Fetch initial URL counts for today and this month
+    const fetchCounts = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/api/url-counts`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        setDailyCount(response.data.dailyCount);
+        setMonthlyCount(response.data.monthlyCount);
+      } catch (err) {
+        console.error('Error fetching counts', err);
+        setError('Error fetching counts');
+      }
+    };
 
+    fetchCounts();
+  }, []);
+
+  const handleShorten = async (e) => {
+    e.preventDefault();
     try {
+      const token = localStorage.getItem('token');
       const response = await axios.post(
-        'https://api.tinyurl.com/create',
-        {
-          url: longUrl,
-        },
+        `${process.env.REACT_APP_API_BASE_URL}/api/shorten-url`,
+        { originalUrl },
         {
           headers: {
-            Authorization: `Bearer ${process.env.REACT_APP_TINYURL_API_TOKEN}`, // Using your token from .env
-            'Content-Type': 'application/json',
-          },
+            Authorization: `Bearer ${token}`
+          }
         }
       );
-      setShortUrl(response.data.data.tiny_url);
-      setLongUrl(''); // Clear input after success
-    } catch (error) {
-      setError('Error creating short URL. Please try again later.');
-    } finally {
-      setLoading(false);
+
+      const { shortenedUrl } = response.data; // Assuming the response includes shortenedUrl
+
+      setShortenedUrl(shortenedUrl);
+      setDailyCount((prev) => prev + 1);
+      setMonthlyCount((prev) => prev + 1);
+
+      // Update the URL list table with the new entry (if this API exists)
+      const updateUrlList = async () => {
+        try {
+          await axios.post(
+            `${process.env.REACT_APP_API_BASE_URL}/api/add-url-to-list`,
+            { originalUrl, shortenedUrl },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            }
+          );
+        } catch (err) {
+          console.error('Error updating URL list', err);
+          setError('Error updating URL list');
+        }
+      };
+
+      updateUrlList();
+    } catch (err) {
+      console.error('Error shortening URL:', err);
+      setError(err.response?.data?.error || 'Error shortening URL');
     }
   };
 
-  const handleReset = () => {
-    setLongUrl('');
-    setShortUrl('');
-    setError('');
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.href = '/login'; // Redirect to login without using navigate
   };
 
   return (
-    <div style={styles.container}>
-      <h1>URL Shortener</h1>
-      <input
-        type="text"
-        placeholder="Enter long URL"
-        value={longUrl}
-        onChange={(e) => setLongUrl(e.target.value)}
-        style={styles.input}
-        disabled={loading}
-      />
-      <button onClick={shortenUrl} style={styles.button} disabled={loading}>
-        {loading ? 'Shortening...' : 'Shorten URL'}
-      </button>
-      <button onClick={handleReset} style={styles.resetButton}>
-        Reset
-      </button>
-      {shortUrl && (
+    <div className="container">
+      <h2>Shorten URL</h2>
+
+      {/* Show the counts */}
+      <p>Total URLs created today: {dailyCount}</p>
+      <p>Total URLs created this month: {monthlyCount}</p>
+
+      {/* Form for shortening the URL */}
+      <form onSubmit={handleShorten}>
+        <input
+          type="text"
+          value={originalUrl}
+          onChange={(e) => setOriginalUrl(e.target.value)}
+          placeholder="Enter the long URL"
+          required
+        />
+        <button type="submit">Shorten URL</button>
+      </form>
+      {shortenedUrl && (
         <div>
-          <h3>
+          <p>
             Shortened URL:{' '}
-            <a href={shortUrl} target="_blank" rel="noopener noreferrer">
-              {shortUrl}
+            <a
+              href={`${process.env.REACT_APP_API_BASE_URL}/${shortenedUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {`${process.env.REACT_APP_API_BASE_URL}/${shortenedUrl}`}
             </a>
-          </h3>
+          </p>
         </div>
       )}
-      {error && <p style={styles.error}>{error}</p>}
+
+      {error && <p>{error}</p>}
+
+      <div className="nav-buttons">
+        <Link to="/dashboard">
+          <button>Go to Dashboard</button>
+        </Link>
+        <Link to="/urls">
+          <button>View All URLs</button>
+        </Link>
+        <button onClick={handleLogout}>Logout</button>
+      </div>
     </div>
   );
 };
 
-const styles = {
-  container: {
-    textAlign: 'center',
-    marginTop: '50px',
-  },
-  input: {
-    padding: '10px',
-    width: '300px',
-    fontSize: '16px',
-    marginRight: '10px',
-    borderRadius: '5px',
-    border: '1px solid #ccc',
-  },
-  button: {
-    padding: '10px 20px',
-    fontSize: '16px',
-    backgroundColor: '#28C8B8',
-    color: '#fff',
-    border: 'none',
-    cursor: 'pointer',
-    borderRadius: '5px',
-  },
-  resetButton: {
-    padding: '10px 20px',
-    fontSize: '16px',
-    backgroundColor: '#f44336',
-    color: '#fff',
-    border: 'none',
-    cursor: 'pointer',
-    borderRadius: '5px',
-    marginLeft: '10px',
-  },
-  error: {
-    color: 'red',
-    marginTop: '20px',
-  },
-};
-
-export default URLShortener;
+export default ShortenForm;
