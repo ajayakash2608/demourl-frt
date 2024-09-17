@@ -5,7 +5,7 @@ import ForgotPassword from './components/ForgotPassword';
 import Login from './components/Login';
 import ResetPassword from './components/ResetPassword';
 import URLShortener from './components/URLShortener';
-import ViewUrl.js from './components/ViewUrl';
+import ViewUrl from './components/ViewUrl';
 import Dashboard from './components/Dashboard';
 
 
