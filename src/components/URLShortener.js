@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // Import Link
 
 const URLShortener = () => {
   const [originalUrl, setOriginalUrl] = useState('');
@@ -79,7 +79,7 @@ const URLShortener = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    window.location.href = '/login';
+    window.location.href = '/login'; // Ensure handleLogout is defined
   };
 
   return (
