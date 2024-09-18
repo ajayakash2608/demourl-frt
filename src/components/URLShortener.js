@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 
-const ShortenForm = () => {
+const URLShortener = () => {
   const [originalUrl, setOriginalUrl] = useState('');
   const [shortenedUrl, setShortenedUrl] = useState('');
   const [error, setError] = useState('');
@@ -10,16 +10,15 @@ const ShortenForm = () => {
   const [monthlyCount, setMonthlyCount] = useState(0);
 
   useEffect(() => {
-    // Fetch initial URL counts for today and this month
     const fetchCounts = async () => {
       try {
         const token = localStorage.getItem('token');
         const response = await axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/api/url-counts`,
+          `${process.env.REACT_APP_API_URL}/api/url-counts`,
           {
             headers: {
-              Authorization: `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setDailyCount(response.data.dailyCount);
@@ -35,63 +34,61 @@ const ShortenForm = () => {
 
   const handleShorten = async (e) => {
     e.preventDefault();
+    setError('');
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `${process.env.REACT_APP_API_BASE_URL}/api/shorten-url`,
+        `${process.env.REACT_APP_API_URL}/api/shorten-url`,
         { originalUrl },
         {
           headers: {
-            Authorization: `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
-      const { shortenedUrl } = response.data; // Assuming the response includes shortenedUrl
-
+      const { shortenedUrl } = response.data;
       setShortenedUrl(shortenedUrl);
       setDailyCount((prev) => prev + 1);
       setMonthlyCount((prev) => prev + 1);
 
-      // Update the URL list table with the new entry (if this API exists)
-      const updateUrlList = async () => {
-        try {
-          await axios.post(
-            `${process.env.REACT_APP_API_BASE_URL}/api/add-url-to-list`,
-            { originalUrl, shortenedUrl },
-            {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            }
-          );
-        } catch (err) {
-          console.error('Error updating URL list', err);
-          setError('Error updating URL list');
-        }
-      };
-
-      updateUrlList();
+      await updateUrlList(originalUrl, shortenedUrl);
     } catch (err) {
       console.error('Error shortening URL:', err);
       setError(err.response?.data?.error || 'Error shortening URL');
     }
   };
 
+  const updateUrlList = async (originalUrl, shortenedUrl) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/add-url-to-list`,
+        { originalUrl, shortenedUrl },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+    } catch (err) {
+      console.error('Error updating URL list', err);
+      setError('Error updating URL list');
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
-    window.location.href = '/login'; // Redirect to login without using navigate
+    window.location.href = '/login';
   };
 
   return (
     <div className="container">
       <h2>Shorten URL</h2>
 
-      {/* Show the counts */}
       <p>Total URLs created today: {dailyCount}</p>
       <p>Total URLs created this month: {monthlyCount}</p>
 
-      {/* Form for shortening the URL */}
       <form onSubmit={handleShorten}>
         <input
           type="text"
@@ -102,22 +99,23 @@ const ShortenForm = () => {
         />
         <button type="submit">Shorten URL</button>
       </form>
+
       {shortenedUrl && (
         <div>
           <p>
             Shortened URL:{' '}
             <a
-              href={`${process.env.REACT_APP_API_BASE_URL}/${shortenedUrl}`}
+              href={`${process.env.REACT_APP_API_URL}/${shortenedUrl}`}
               target="_blank"
               rel="noopener noreferrer"
             >
-              {`${process.env.REACT_APP_API_BASE_URL}/${shortenedUrl}`}
+              {`${process.env.REACT_APP_API_URL}/${shortenedUrl}`}
             </a>
           </p>
         </div>
       )}
 
-      {error && <p>{error}</p>}
+      {error && <p className="error">{error}</p>}
 
       <div className="nav-buttons">
         <Link to="/dashboard">
@@ -132,4 +130,4 @@ const ShortenForm = () => {
   );
 };
 
-export default ShortenForm;
+export default URLShortener;
